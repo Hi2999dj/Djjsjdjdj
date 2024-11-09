@@ -1,0 +1,70 @@
+local player = game.Players.LocalPlayer
+local camera = game.Workspace.CurrentCamera
+local userInputService = game:GetService("UserInputService")
+local mouse = player:GetMouse()
+
+-- Adjust these values for the lock-on distance and angle
+local lockOnDistance = 50  -- Distance for lock-on
+local lockOnAngle = 30  -- Angle tolerance for locking on (unused but can be implemented)
+
+local lockedOnEnemy = nil  -- Currently locked-on enemy (if any)
+
+-- Function to find the nearest enemy within lock-on range
+local function findNearestEnemy()
+    local closestEnemy = nil
+    local shortestDistance = lockOnDistance
+    
+    -- Iterate through all characters in the game
+    for _, obj in pairs(game.Workspace:GetChildren()) do
+        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj ~= player.Character then
+            local enemy = obj
+            local humanoidRootPart = enemy:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                local distance = (player.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
+                if distance < shortestDistance then
+                    closestEnemy = enemy
+                    shortestDistance = distance
+                end
+            end
+        end
+    end
+    return closestEnemy
+end
+
+-- Lock onto the nearest enemy
+local function lockOnToEnemy()
+    local enemy = findNearestEnemy()
+    
+    if enemy then
+        lockedOnEnemy = enemy
+        -- Optional: Provide feedback that lock-on is successful (e.g., print to output or UI)
+        print("Locked onto: " .. enemy.Name)
+    else
+        lockedOnEnemy = nil
+        print("No enemy within range.")
+    end
+end
+
+-- Update the camera to follow the locked-on enemy
+local function updateCamera()
+    if lockedOnEnemy and lockedOnEnemy:FindFirstChild("HumanoidRootPart") then
+        local enemyPosition = lockedOnEnemy.HumanoidRootPart.Position
+        -- Camera follows the locked enemy's position
+        camera.CFrame = CFrame.new(camera.CFrame.Position, enemyPosition)
+    end
+end
+
+-- Keybind to toggle lock-on (using Q key)
+userInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end  -- Ignore input if it's processed by something else
+    
+    -- Check for Q key press
+    if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.Q then
+        lockOnToEnemy()  -- Lock onto the nearest enemy when Q is pressed
+    end
+end)
+
+-- Continuously update the camera to follow the locked enemy
+game:GetService("RunService").RenderStepped:Connect(function()
+    updateCamera()
+end)
